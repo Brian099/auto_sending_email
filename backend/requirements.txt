@@ -1,0 +1,9 @@
+fastapi
+uvicorn[standard]
+sqlmodel
+pymysql
+cryptography
+python-multipart
+email-validator
+jinja2
+aiosmtplib

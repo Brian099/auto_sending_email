@@ -1,0 +1,26 @@
+services:
+  app:
+    build: .
+    container_name: email_system_app
+    ports:
+      - "18088:80"
+    volumes:
+      - ./backend:/app/backend
+      - ./frontend:/var/www/html
+      - ./data/uploads:/app/uploads # 附件/上传文件存储目录
+    environment:
+      # 数据库配置现在建议通过系统安装页面 (install.php) 进行配置
+      # 也可以通过环境变量覆盖 (可选)
+      - MYSQL_HOST=${MYSQL_HOST:-}
+      - MYSQL_PORT=${MYSQL_PORT:-}
+      - MYSQL_USER=${MYSQL_USER:-}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD:-}
+      - MYSQL_DATABASE=${MYSQL_DATABASE:-}
+    networks:
+      - app_network
+    extra_hosts:
+      - "host.docker.internal:host-gateway" # 允许容器访问宿主机服务 (Linux下需要)
+
+networks:
+  app_network:
+    driver: bridge
