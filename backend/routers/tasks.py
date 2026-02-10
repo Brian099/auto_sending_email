@@ -2,12 +2,13 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlmodel import Session, select
 from typing import List, Dict, Any
 from database import get_session
-from models import SendingTask, SendingTaskCreate, SendingTaskRead, SendingLog, SendingLogRead, Recipient, Sender, Template
+from models import SendingTask, SendingTaskCreate, SendingTaskRead, SendingLog, SendingLogRead, Recipient, Sender, Template, User
+from routers.auth import get_current_user
 
 router = APIRouter(prefix="/tasks", tags=["tasks"])
 
 @router.post("/", response_model=SendingTaskRead)
-def create_task(*, session: Session = Depends(get_session), task: SendingTaskCreate):
+def create_task(*, session: Session = Depends(get_session), task: SendingTaskCreate, current_user: User = Depends(get_current_user)):
     """
     Create a new sending task.
     Config can include:
@@ -23,19 +24,19 @@ def create_task(*, session: Session = Depends(get_session), task: SendingTaskCre
     return db_task
 
 @router.get("/", response_model=List[SendingTaskRead])
-def read_tasks(*, session: Session = Depends(get_session), offset: int = 0, limit: int = Query(default=100, le=100)):
+def read_tasks(*, session: Session = Depends(get_session), offset: int = 0, limit: int = Query(default=100, le=100), current_user: User = Depends(get_current_user)):
     tasks = session.exec(select(SendingTask).order_by(SendingTask.created_at.desc()).offset(offset).limit(limit)).all()
     return tasks
 
 @router.get("/{task_id}", response_model=SendingTaskRead)
-def read_task(*, session: Session = Depends(get_session), task_id: int):
+def read_task(*, session: Session = Depends(get_session), task_id: int, current_user: User = Depends(get_current_user)):
     task = session.get(SendingTask, task_id)
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
     return task
 
 @router.post("/{task_id}/start", response_model=SendingTaskRead)
-def start_task(*, session: Session = Depends(get_session), task_id: int):
+def start_task(*, session: Session = Depends(get_session), task_id: int, current_user: User = Depends(get_current_user)):
     task = session.get(SendingTask, task_id)
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
@@ -47,7 +48,7 @@ def start_task(*, session: Session = Depends(get_session), task_id: int):
     return task
 
 @router.post("/{task_id}/pause", response_model=SendingTaskRead)
-def pause_task(*, session: Session = Depends(get_session), task_id: int):
+def pause_task(*, session: Session = Depends(get_session), task_id: int, current_user: User = Depends(get_current_user)):
     task = session.get(SendingTask, task_id)
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
@@ -60,7 +61,7 @@ def pause_task(*, session: Session = Depends(get_session), task_id: int):
     return task
 
 @router.post("/{task_id}/stop", response_model=SendingTaskRead)
-def stop_task(*, session: Session = Depends(get_session), task_id: int):
+def stop_task(*, session: Session = Depends(get_session), task_id: int, current_user: User = Depends(get_current_user)):
     task = session.get(SendingTask, task_id)
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
@@ -77,7 +78,8 @@ def read_task_logs(
     session: Session = Depends(get_session), 
     task_id: int, 
     offset: int = 0, 
-    limit: int = Query(default=100, le=100)
+    limit: int = Query(default=100, le=100),
+    current_user: User = Depends(get_current_user)
 ):
     # Join with Recipient, Sender, and Template to get details
     statement = (

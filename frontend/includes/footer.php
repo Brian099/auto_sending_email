@@ -29,11 +29,17 @@
         const API_BASE = '/api';
 
         async function apiCall(endpoint, method = 'GET', data = null, suppressError = false) {
+            const token = localStorage.getItem('token');
+            const headers = {
+                'Content-Type': 'application/json'
+            };
+            if (token) {
+                headers['X-Token'] = token;
+            }
+
             const options = {
                 method: method,
-                headers: {
-                    'Content-Type': 'application/json'
-                }
+                headers: headers
             };
             if (data) {
                 options.body = JSON.stringify(data);
@@ -41,6 +47,10 @@
             try {
                 const response = await fetch(API_BASE + endpoint, options);
                 if (!response.ok) {
+                    if (response.status === 401) {
+                        window.location.href = '/login.php';
+                        throw new Error('Authentication failed');
+                    }
                     const errorData = await response.json();
                     throw new Error(errorData.detail || 'API Request Failed');
                 }

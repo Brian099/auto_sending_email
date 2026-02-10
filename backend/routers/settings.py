@@ -2,17 +2,18 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, select
 from typing import List
 from database import get_session
-from models import SystemSetting, SystemSettingCreate, SystemSettingRead, SystemSettingUpdate
+from models import SystemSetting, SystemSettingCreate, SystemSettingRead, SystemSettingUpdate, User
+from routers.auth import get_current_user
 
 router = APIRouter(prefix="/settings", tags=["settings"])
 
 @router.get("/", response_model=List[SystemSettingRead])
-def read_settings(*, session: Session = Depends(get_session)):
+def read_settings(*, session: Session = Depends(get_session), current_user: User = Depends(get_current_user)):
     settings = session.exec(select(SystemSetting)).all()
     return settings
 
 @router.get("/{key}", response_model=SystemSettingRead)
-def read_setting(*, session: Session = Depends(get_session), key: str):
+def read_setting(*, session: Session = Depends(get_session), key: str, current_user: User = Depends(get_current_user)):
     setting = session.exec(select(SystemSetting).where(SystemSetting.key == key)).first()
     if not setting:
         # Return defaults if not found and auto-create them in DB
@@ -48,7 +49,7 @@ def read_setting(*, session: Session = Depends(get_session), key: str):
     return setting
 
 @router.put("/{key}", response_model=SystemSettingRead)
-def update_setting(*, session: Session = Depends(get_session), key: str, setting_in: SystemSettingUpdate):
+def update_setting(*, session: Session = Depends(get_session), key: str, setting_in: SystemSettingUpdate, current_user: User = Depends(get_current_user)):
     setting = session.exec(select(SystemSetting).where(SystemSetting.key == key)).first()
     
     if not setting:

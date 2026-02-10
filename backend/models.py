@@ -188,3 +188,23 @@ class User(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     username: str = Field(unique=True, index=True)
     password_hash: str
+
+class UserSession(SQLModel, table=True):
+    __tablename__ = "user_sessions"
+    id: Optional[int] = Field(default=None, primary_key=True)
+    user_id: int = Field(foreign_key="users.id")
+    token: str = Field(unique=True, index=True)
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    expires_at: datetime
+
+class UserLogin(SQLModel):
+    username: str
+    password: str
+
+class UserPasswordUpdate(SQLModel):
+    old_password: str
+    new_password: str
+
+class UserRead(SQLModel):
+    id: int
+    username: str

@@ -10,6 +10,14 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
     
     <script>
+        // Check authentication
+        if (window.location.pathname !== '/login.php' && window.location.pathname !== '/install.php') {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                window.location.href = '/login.php';
+            }
+        }
+
         // Check installation status
         if (window.location.pathname !== '/install.php') {
             fetch('/api/install/status')
@@ -217,13 +225,34 @@
         </ul>
         <ul class="navbar-nav ms-auto">
             <!-- Right navbar links -->
-            <li class="nav-item">
-                <a class="nav-link" href="#" role="button">
-                    <i class="bi bi-person-circle"></i> Admin
+            <li class="nav-item dropdown">
+                <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="bi bi-person-circle"></i> <span id="current-username">Admin</span>
                 </a>
+                <ul class="dropdown-menu dropdown-menu-end">
+                    <li><a class="dropdown-item" href="#" onclick="logout()">退出登录</a></li>
+                </ul>
             </li>
         </ul>
     </nav>
+    
+    <script>
+        // Set username
+        document.addEventListener('DOMContentLoaded', () => {
+             const username = localStorage.getItem('username');
+             if (username) {
+                 const el = document.getElementById('current-username');
+                 if (el) el.innerText = username;
+             }
+        });
+
+        function logout() {
+            localStorage.removeItem('token');
+            localStorage.removeItem('username');
+            localStorage.removeItem('expires_at');
+            window.location.href = '/login.php';
+        }
+    </script>
 
     <!-- Main Sidebar Container -->
     <aside class="main-sidebar">

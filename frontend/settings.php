@@ -42,6 +42,30 @@ include 'includes/header.php';
             </div>
         </div>
     </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                账户安全
+            </div>
+            <div class="card-body">
+                <form id="passwordForm">
+                    <div class="mb-3">
+                        <label class="form-label">当前密码</label>
+                        <input type="password" class="form-control" id="old_password" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">新密码</label>
+                        <input type="password" class="form-control" id="new_password" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">确认新密码</label>
+                        <input type="password" class="form-control" id="confirm_password" required>
+                    </div>
+                    <button type="button" class="btn btn-warning" onclick="changePassword()">修改密码</button>
+                </form>
+            </div>
+        </div>
+    </div>
 </div>
 
 <script>
@@ -116,6 +140,35 @@ include 'includes/header.php';
         } catch (e) {
             console.error(e);
             alert('保存失败: ' + e.message);
+        }
+    }
+
+    async function changePassword() {
+        const oldPassword = document.getElementById('old_password').value;
+        const newPassword = document.getElementById('new_password').value;
+        const confirmPassword = document.getElementById('confirm_password').value;
+        
+        if (!oldPassword || !newPassword || !confirmPassword) {
+            alert('请填写所有密码字段');
+            return;
+        }
+        
+        if (newPassword !== confirmPassword) {
+            alert('两次输入的新密码不一致');
+            return;
+        }
+        
+        try {
+            await apiCall('/auth/change-password', 'POST', {
+                old_password: oldPassword,
+                new_password: newPassword
+            });
+            
+            alert('密码修改成功');
+            document.getElementById('passwordForm').reset();
+        } catch (e) {
+            console.error(e);
+            alert('密码修改失败: ' + e.message);
         }
     }
 

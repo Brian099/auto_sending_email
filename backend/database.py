@@ -1,9 +1,13 @@
-from sqlmodel import SQLModel, create_engine, Session
+from sqlmodel import SQLModel, create_engine, Session, select
 import os
 import time
 import json
+import hashlib
 from sqlalchemy import text
 from sqlalchemy.exc import OperationalError
+
+# Import models for initialization
+from models import User, SystemSetting
 
 CONFIG_FILE = "db_config.json"
 
@@ -131,6 +135,43 @@ def create_database_if_not_exists():
     print("Could not connect to database after multiple attempts.")
     return False
 
+def get_password_hash(password: str) -> str:
+    return hashlib.sha256(password.encode()).hexdigest()
+
+def init_default_data(engine):
+    """Initialize default data (user, settings) if not exists"""
+    try:
+        with Session(engine) as session:
+            # 1. Init User
+            user = session.exec(select(User).where(User.username == "admin")).first()
+            if not user:
+                print("Initializing default admin user...")
+                admin_user = User(
+                    username="admin",
+                    password_hash=get_password_hash("admin123")
+                )
+                session.add(admin_user)
+                print("Default user 'admin' created.")
+            
+            # 2. Init System Settings
+            default_settings = {
+                "default_interval_min": ("10", "Minimum sending interval in seconds"),
+                "default_interval_max": ("60", "Maximum sending interval in seconds"),
+                "default_concurrency": ("1", "Number of concurrent sending tasks")
+            }
+            
+            for key, (value, desc) in default_settings.items():
+                setting = session.exec(select(SystemSetting).where(SystemSetting.key == key)).first()
+                if not setting:
+                    print(f"Initializing setting '{key}'...")
+                    new_setting = SystemSetting(key=key, value=value, description=desc)
+                    session.add(new_setting)
+            
+            session.commit()
+            print("Default data initialization completed.")
+    except Exception as e:
+        print(f"Error initializing default data: {e}")
+
 def create_db_and_tables():
     # If not installed, we try to create if config is available (e.g. from setup_db call)
     # But setup_db calls this function AFTER setting db_config manually.
@@ -153,6 +194,10 @@ def create_db_and_tables():
 
             SQLModel.metadata.create_all(current_engine)
             print("Tables created successfully.")
+
+            # Initialize default data
+            init_default_data(current_engine)
+            
             return True
         except Exception as e:
             print(f"Error creating tables: {e}")

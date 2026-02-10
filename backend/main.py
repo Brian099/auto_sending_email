@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from contextlib import asynccontextmanager
 from database import create_db_and_tables
-from routers import recipients, senders, templates, tasks, settings, install, upload, dashboard
+from routers import recipients, senders, templates, tasks, settings, install, upload, dashboard, auth
 from services.task_runner import task_runner
 import os
 
@@ -36,6 +36,7 @@ app.include_router(settings.router)
 app.include_router(install.router)
 app.include_router(upload.router)
 app.include_router(dashboard.router)
+app.include_router(auth.router)
 
 @app.get("/")
 def read_root():

@@ -2,7 +2,8 @@ from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File, 
 from sqlmodel import Session, select, col
 from typing import List, Optional, Any
 from database import get_session
-from models import Recipient, RecipientCreate, RecipientRead, RecipientUpdate, RecipientGroup, RecipientGroupCreate, RecipientGroupRead, RecipientGroupUpdate, Template
+from models import Recipient, RecipientCreate, RecipientRead, RecipientUpdate, RecipientGroup, RecipientGroupCreate, RecipientGroupRead, RecipientGroupUpdate, Template, User
+from routers.auth import get_current_user
 import csv
 import io
 import codecs
@@ -18,7 +19,7 @@ class BatchOperation(BaseModel):
 # --- Groups ---
 
 @router.post("/groups/", response_model=RecipientGroupRead)
-def create_group(*, session: Session = Depends(get_session), group: RecipientGroupCreate):
+def create_group(*, session: Session = Depends(get_session), group: RecipientGroupCreate, current_user: User = Depends(get_current_user)):
     db_group = RecipientGroup.from_orm(group)
     
     # Handle templates
@@ -37,7 +38,7 @@ def create_group(*, session: Session = Depends(get_session), group: RecipientGro
     return response_group
 
 @router.get("/groups/", response_model=List[RecipientGroupRead])
-def read_groups(*, session: Session = Depends(get_session), offset: int = 0, limit: int = Query(default=100, le=100)):
+def read_groups(*, session: Session = Depends(get_session), offset: int = 0, limit: int = Query(default=100, le=100), current_user: User = Depends(get_current_user)):
     groups = session.exec(select(RecipientGroup).offset(offset).limit(limit)).all()
     
     # Populate template_ids and template_names for each group
@@ -51,7 +52,7 @@ def read_groups(*, session: Session = Depends(get_session), offset: int = 0, lim
     return result
 
 @router.patch("/groups/{group_id}", response_model=RecipientGroupRead)
-def update_group(*, session: Session = Depends(get_session), group_id: int, group: RecipientGroupUpdate):
+def update_group(*, session: Session = Depends(get_session), group_id: int, group: RecipientGroupUpdate, current_user: User = Depends(get_current_user)):
     db_group = session.get(RecipientGroup, group_id)
     if not db_group:
         raise HTTPException(status_code=404, detail="Group not found")
@@ -80,7 +81,7 @@ def update_group(*, session: Session = Depends(get_session), group_id: int, grou
     return response_group
 
 @router.delete("/groups/{group_id}")
-def delete_group(*, session: Session = Depends(get_session), group_id: int):
+def delete_group(*, session: Session = Depends(get_session), group_id: int, current_user: User = Depends(get_current_user)):
     group = session.get(RecipientGroup, group_id)
     if not group:
         raise HTTPException(status_code=404, detail="Group not found")
@@ -102,7 +103,7 @@ def delete_group(*, session: Session = Depends(get_session), group_id: int):
 # --- Recipients ---
 
 @router.post("/batch")
-def batch_operation(*, session: Session = Depends(get_session), operation: BatchOperation):
+def batch_operation(*, session: Session = Depends(get_session), operation: BatchOperation, current_user: User = Depends(get_current_user)):
     """
     Perform batch operations on recipients.
     Actions:
@@ -142,7 +143,7 @@ def batch_operation(*, session: Session = Depends(get_session), operation: Batch
     return {"count": count, "action": operation.action}
 
 @router.post("/", response_model=RecipientRead)
-def create_recipient(*, session: Session = Depends(get_session), recipient: RecipientCreate):
+def create_recipient(*, session: Session = Depends(get_session), recipient: RecipientCreate, current_user: User = Depends(get_current_user)):
     db_recipient = Recipient.from_orm(recipient)
     session.add(db_recipient)
     session.commit()
@@ -156,7 +157,8 @@ def read_recipients(
     offset: int = 0, 
     limit: int = Query(default=100, le=100),
     group_id: Optional[int] = None,
-    q: Optional[str] = None
+    q: Optional[str] = None,
+    current_user: User = Depends(get_current_user)
 ):
     query = select(Recipient)
     if group_id:
@@ -176,14 +178,14 @@ def read_recipients(
     return recipients
 
 @router.get("/{recipient_id}", response_model=RecipientRead)
-def read_recipient(*, session: Session = Depends(get_session), recipient_id: int):
+def read_recipient(*, session: Session = Depends(get_session), recipient_id: int, current_user: User = Depends(get_current_user)):
     recipient = session.get(Recipient, recipient_id)
     if not recipient:
         raise HTTPException(status_code=404, detail="Recipient not found")
     return recipient
 
 @router.patch("/{recipient_id}", response_model=RecipientRead)
-def update_recipient(*, session: Session = Depends(get_session), recipient_id: int, recipient: RecipientUpdate):
+def update_recipient(*, session: Session = Depends(get_session), recipient_id: int, recipient: RecipientUpdate, current_user: User = Depends(get_current_user)):
     db_recipient = session.get(Recipient, recipient_id)
     if not db_recipient:
         raise HTTPException(status_code=404, detail="Recipient not found")
@@ -211,7 +213,8 @@ async def import_recipients(
     *, 
     session: Session = Depends(get_session), 
     file: UploadFile = File(...), 
-    group_id: Optional[int] = None
+    group_id: Optional[int] = None,
+    current_user: User = Depends(get_current_user)
 ):
     """
     Import recipients from CSV file.
